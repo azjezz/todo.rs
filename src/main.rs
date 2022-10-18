@@ -3,8 +3,6 @@ mod http;
 mod task;
 
 use actix_web::{web, App, HttpServer};
-use task::database::repository;
-use task::routes;
 use tera::Tera;
 
 #[actix_web::main]
@@ -28,13 +26,13 @@ async fn main() -> std::io::Result<()> {
             }
         };
 
-        let task_repository = repository::TaskRepository::new(pool.clone());
+        let task_repository = task::database::repository::TaskRepository::new(pool.clone());
 
         App::new()
-            .route("/", web::get().to(routes::index::route))
-            .route("/task/create", web::post().to(routes::create::route))
-            .route("/task/delete/{id}", web::post().to(routes::delete::route))
-            .route("/task/finish/{id}", web::post().to(routes::finish::route))
+            .route("/", web::get().to(task::routes::index))
+            .route("/task", web::post().to(task::routes::create))
+            .route("/task/finish/{id}", web::post().to(task::routes::finish))
+            .route("/task/delete/{id}", web::post().to(task::routes::delete))
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(task_repository.clone()))
             .app_data(web::Data::new(tera.clone()))

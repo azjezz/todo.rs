@@ -10,9 +10,9 @@ pub struct HtmlTemplateResponse {
 }
 
 impl HtmlTemplateResponse {
-    pub fn new(template: String, context: Value) -> Self {
+    pub fn new(template: &'static str, context: Value) -> Self {
         HtmlTemplateResponse {
-            template: template,
+            template: template.to_string(),
             context: context,
         }
     }
@@ -39,8 +39,10 @@ pub struct RedirectResponse {
 }
 
 impl RedirectResponse {
-    pub fn to(location: String) -> Self {
-        RedirectResponse { location: location }
+    pub fn to(location: &'static str) -> Self {
+        RedirectResponse {
+            location: location.to_string(),
+        }
     }
 }
 

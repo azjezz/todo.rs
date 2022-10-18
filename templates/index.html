@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<form method="post" action="/task/create" class="uk-text-center" autocomplete="off" uk-grid>
+<form method="POST" action="/task" class="uk-text-center" autocomplete="off" uk-grid>
   <div class="uk-width-expand">
     <input class="uk-input" type="text" placeholder="New task" name="content" autofocus required>
   </div>
@@ -33,13 +33,13 @@
         <span class="uk-text-emphasis">{{ task.content }}</span>
       </td>
       <td class="uk-width-auto">
-        <form method="post" action="/task/finish/{{ task.id }}">
+        <form method="POST" action="/task/finish/{{ task.id }}">
           <button type="submit" class="uk-button uk-button-text uk-button-small">Done</button>
         </form>
       </td>
       {% endif %}
       <td class="uk-width-auto">
-        <form method="post" action="/task/delete/{{ task.id }}">
+        <form method="POST" action="/task/delete/{{ task.id }}">
           <button type="submit" class="uk-button uk-button-text uk-button-small">Delete</button>
         </form>
       </td>
