@@ -1,10 +1,11 @@
 mod database;
+mod errors;
 mod http;
 mod task;
 
+use actix_web::web;
 use actix_web::App;
 use actix_web::HttpServer;
-use actix_web::web;
 use serde_json::json;
 use tera::Tera;
 
@@ -42,7 +43,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(task_repository.clone()))
             .app_data(web::Data::new(tera.clone()))
             .default_service(web::to(|| async {
-                HtmlTemplateResponse::new("404.html", json!({}))
+                HtmlTemplateResponse::new("errors/404.html", json!({}))
             }))
     })
     .bind(("127.0.0.1", 8080))?

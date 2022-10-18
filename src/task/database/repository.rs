@@ -1,7 +1,7 @@
+use crate::database::pool::PostgresPool;
+use crate::errors::Error;
 use crate::task::database::model::NewTask;
 use crate::task::database::model::Task;
-
-use crate::database::pool::PostgresPool;
 
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
@@ -17,58 +17,79 @@ impl TaskRepository {
         TaskRepository { pool }
     }
 
-    pub fn finish(&self, identifier: i32) {
-        use crate::database::schema::tasks::dsl::*;
+    pub fn find_all(&self) -> Result<Vec<Task>, Error> {
+        match self.get_connection() {
+            Ok(mut connection) => {
+                use crate::database::schema::tasks::dsl::*;
 
-        let connection = &mut self.get_connection();
+                let query = tasks.order_by(id);
 
-        diesel::update(tasks.filter(id.eq(identifier)))
-            .set(is_finished.eq(true))
-            .execute(&mut *connection)
-            .expect("failed to update task");
-    }
-
-    pub fn save(&self, model: NewTask) -> Task {
-        use crate::database::schema::tasks::dsl::*;
-
-        let connection = &mut self.get_connection();
-
-        let data = diesel::insert_into(tasks)
-            .values(&model)
-            .get_result::<(i32, String, bool)>(connection)
-            .expect("Error saving new account");
-
-        Task {
-            id: data.0,
-            content: data.1,
-            is_finished: data.2,
+                match query.load::<Task>(&mut *connection) {
+                    Ok(results) => Ok(results),
+                    Err(error) => Err(Error::DatabaseQueryError(error.to_string())),
+                }
+            }
+            Err(error) => Err(error),
         }
     }
 
-    pub fn delete(&self, identifier: i32) {
-        use crate::database::schema::tasks::dsl::*;
+    pub fn save(&self, model: NewTask) -> Result<Task, Error> {
+        match self.get_connection() {
+            Ok(mut connection) => {
+                use crate::database::schema::tasks::dsl::*;
 
-        let connection = &mut self.get_connection();
+                let query = diesel::insert_into(tasks).values(&model);
 
-        diesel::delete(tasks.filter(id.eq(identifier)))
-            .execute(&mut *connection)
-            .expect("failed to delete task");
+                match query.get_result::<(i32, String, bool)>(&mut *connection) {
+                    Ok(data) => Ok(Task {
+                        id: data.0,
+                        content: data.1,
+                        is_finished: data.2,
+                    }),
+                    Err(error) => Err(Error::DatabaseQueryError(error.to_string())),
+                }
+            }
+            Err(error) => Err(error),
+        }
     }
 
-    pub fn find_all(&self) -> Vec<Task> {
-        use crate::database::schema::tasks::dsl::*;
+    pub fn finish(&self, identifier: i32) -> Result<usize, Error> {
+        match self.get_connection() {
+            Ok(mut connection) => {
+                use crate::database::schema::tasks::dsl::*;
 
-        let connection = &mut self.get_connection();
+                let query =
+                    diesel::update(tasks.filter(id.eq(identifier))).set(is_finished.eq(true));
 
-        tasks
-            .order_by(id)
-            .load::<Task>(&mut *connection)
-            .expect("Error loading accounts")
+                match query.execute(&mut *connection) {
+                    Ok(results) => Ok(results),
+                    Err(error) => Err(Error::DatabaseQueryError(error.to_string())),
+                }
+            }
+            Err(error) => Err(error),
+        }
     }
 
-    fn get_connection(&self) -> PooledConnection<ConnectionManager<PgConnection>> {
-        self.pool
-            .get()
-            .expect("couldn't get db connection from pool")
+    pub fn delete(&self, identifier: i32) -> Result<usize, Error> {
+        match self.get_connection() {
+            Ok(mut connection) => {
+                use crate::database::schema::tasks::dsl::*;
+
+                let query = diesel::delete(tasks.filter(id.eq(identifier)));
+
+                match query.execute(&mut *connection) {
+                    Ok(results) => Ok(results),
+                    Err(error) => Err(Error::DatabaseQueryError(error.to_string())),
+                }
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn get_connection(&self) -> Result<PooledConnection<ConnectionManager<PgConnection>>, Error> {
+        match self.pool.get() {
+            Ok(connection) => Ok(connection),
+            Err(error) => Err(Error::DatabaseConnectionError(error.to_string())),
+        }
     }
 }
