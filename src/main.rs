@@ -2,8 +2,13 @@ mod database;
 mod http;
 mod task;
 
-use actix_web::{web, App, HttpServer};
+use actix_web::App;
+use actix_web::HttpServer;
+use actix_web::web;
+use serde_json::json;
 use tera::Tera;
+
+use crate::http::HtmlTemplateResponse;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -36,6 +41,9 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .app_data(web::Data::new(task_repository.clone()))
             .app_data(web::Data::new(tera.clone()))
+            .default_service(web::to(|| async {
+                HtmlTemplateResponse::new("404.html", json!({}))
+            }))
     })
     .bind(("127.0.0.1", 8080))?
     .run()
