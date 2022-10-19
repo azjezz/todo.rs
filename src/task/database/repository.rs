@@ -17,6 +17,22 @@ impl TaskRepository {
         TaskRepository { pool }
     }
 
+    pub fn find(&self, identifier: i32) -> Result<Option<Task>, Error> {
+        match self.get_connection() {
+            Ok(mut connection) => {
+                use crate::database::schema::tasks::dsl::*;
+
+                let query = tasks.order_by(id).filter(id.eq(identifier));
+
+                match query.first::<Task>(&mut *connection).optional() {
+                    Ok(res) => Ok(res),
+                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
+                }
+            }
+            Err(error) => Err(error),
+        }
+    }
+
     pub fn find_all(&self) -> Result<Vec<Task>, Error> {
         match self.get_connection() {
             Ok(mut connection) => {
@@ -25,8 +41,8 @@ impl TaskRepository {
                 let query = tasks.order_by(id);
 
                 match query.load::<Task>(&mut *connection) {
-                    Ok(results) => Ok(results),
-                    Err(error) => Err(Error::DatabaseQueryError(error.to_string())),
+                    Ok(r) => Ok(r),
+                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
                 }
             }
             Err(error) => Err(error),
@@ -46,10 +62,10 @@ impl TaskRepository {
                         content: data.1,
                         is_finished: data.2,
                     }),
-                    Err(error) => Err(Error::DatabaseQueryError(error.to_string())),
+                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
                 }
             }
-            Err(error) => Err(error),
+            Err(e) => Err(e),
         }
     }
 
@@ -63,10 +79,10 @@ impl TaskRepository {
 
                 match query.execute(&mut *connection) {
                     Ok(results) => Ok(results),
-                    Err(error) => Err(Error::DatabaseQueryError(error.to_string())),
+                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
                 }
             }
-            Err(error) => Err(error),
+            Err(e) => Err(e),
         }
     }
 
@@ -78,18 +94,18 @@ impl TaskRepository {
                 let query = diesel::delete(tasks.filter(id.eq(identifier)));
 
                 match query.execute(&mut *connection) {
-                    Ok(results) => Ok(results),
-                    Err(error) => Err(Error::DatabaseQueryError(error.to_string())),
+                    Ok(r) => Ok(r),
+                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
                 }
             }
-            Err(error) => Err(error),
+            Err(e) => Err(e),
         }
     }
 
     fn get_connection(&self) -> Result<PooledConnection<ConnectionManager<PgConnection>>, Error> {
         match self.pool.get() {
-            Ok(connection) => Ok(connection),
-            Err(error) => Err(Error::DatabaseConnectionError(error.to_string())),
+            Ok(c) => Ok(c),
+            Err(e) => Err(Error::DatabaseConnection(e.to_string())),
         }
     }
 }

@@ -1202,19 +1202,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a3f87b73ce11b1619a3c6332f45341e0047173771e8b8b73f87bfeefb7b56244"
 
 [[package]]
-name = "rust-blog"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "diesel",
- "dotenvy",
- "r2d2",
- "serde",
- "serde_json",
- "tera",
-]
-
-[[package]]
 name = "rustc_version"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1471,6 +1458,19 @@ name = "tinyvec_macros"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
+
+[[package]]
+name = "todo-rs"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "diesel",
+ "dotenvy",
+ "r2d2",
+ "serde",
+ "serde_json",
+ "tera",
+]
 
 [[package]]
 name = "tokio"

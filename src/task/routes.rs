@@ -1,66 +1,53 @@
 use crate::errors::Error;
-use crate::http::HtmlTemplateResponse;
-use crate::http::RedirectResponse;
-use crate::task::database::model;
-use crate::task::database::repository;
-use crate::task::input;
+use crate::http::Responder;
+use crate::task::database::model::NewTask;
+use crate::task::database::repository::TaskRepository;
+use crate::task::input::CreateTask;
 
-use actix_web::web;
-use actix_web::HttpRequest;
-use actix_web::HttpResponse;
-use actix_web::Responder;
+use actix_web::web::{Data, Form, Path};
 use serde_json::json;
 
-pub async fn index(request: HttpRequest) -> HttpResponse {
-    if let Some(repository) = request.app_data::<web::Data<repository::TaskRepository>>() {
-        return match repository.find_all() {
-            Ok(tasks) => HtmlTemplateResponse::new("index.html", json!({ "tasks": tasks }))
-                .respond_to(&request),
-            Err(error) => HtmlTemplateResponse::error(error).respond_to(&request),
-        };
+pub async fn index(repository: Data<TaskRepository>) -> Responder {
+    match repository.find_all() {
+        Ok(tasks) => Responder::html_template("index.html", json!({ "tasks": tasks })),
+        Err(e) => Responder::error(e),
     }
-
-    HtmlTemplateResponse::error(Error::MissingDependencyError("TaskRepository"))
-        .respond_to(&request)
 }
 
-pub async fn create(request: HttpRequest, input: web::Form<input::CreateTask>) -> HttpResponse {
-    if let Some(repository) = request.app_data::<web::Data<repository::TaskRepository>>() {
-        let model = model::NewTask {
-            content: &input.content,
-            is_finished: &false,
-        };
+pub async fn create(repository: Data<TaskRepository>, input: Form<CreateTask>) -> Responder {
+    let model = NewTask {
+        content: &input.content,
+        is_finished: &false,
+    };
 
-        return match repository.save(model) {
-            Ok(_) => RedirectResponse::to("/").respond_to(&request),
-            Err(error) => HtmlTemplateResponse::error(error).respond_to(&request),
-        };
+    match repository.save(model) {
+        Ok(_) => Responder::redirect_to("/"),
+        Err(e) => Responder::error(e),
     }
-
-    HtmlTemplateResponse::error(Error::MissingDependencyError("TaskRepository"))
-        .respond_to(&request)
 }
 
-pub async fn finish(request: HttpRequest, id: web::Path<(i32,)>) -> HttpResponse {
-    if let Some(repository) = request.app_data::<web::Data<repository::TaskRepository>>() {
-        return match repository.finish(id.into_inner().0) {
-            Ok(_) => RedirectResponse::to("/").respond_to(&request),
-            Err(error) => HtmlTemplateResponse::error(error).respond_to(&request),
-        };
+pub async fn finish(repository: Data<TaskRepository>, id: Path<(i32,)>) -> Responder {
+    match repository.find(id.into_inner().0) {
+        Ok(task) => match task {
+            Some(t) => match repository.finish(t.id) {
+                Ok(_) => Responder::redirect_to("/"),
+                Err(e) => Responder::error(e),
+            },
+            None => Responder::error(Error::NotFound("Task not found.".to_owned())),
+        },
+        Err(e) => Responder::error(e),
     }
-
-    HtmlTemplateResponse::error(Error::MissingDependencyError("TaskRepository"))
-        .respond_to(&request)
 }
 
-pub async fn delete(request: HttpRequest, id: web::Path<(i32,)>) -> HttpResponse {
-    if let Some(repository) = request.app_data::<web::Data<repository::TaskRepository>>() {
-        return match repository.delete(id.into_inner().0) {
-            Ok(_) => RedirectResponse::to("/").respond_to(&request),
-            Err(error) => HtmlTemplateResponse::error(error).respond_to(&request),
-        };
+pub async fn delete(repository: Data<TaskRepository>, id: Path<(i32,)>) -> Responder {
+    match repository.find(id.into_inner().0) {
+        Ok(task) => match task {
+            Some(t) => match repository.delete(t.id) {
+                Ok(_) => Responder::redirect_to("/"),
+                Err(e) => Responder::error(e),
+            },
+            None => Responder::error(Error::NotFound("Task not found.".to_owned())),
+        },
+        Err(e) => Responder::error(e),
     }
-
-    HtmlTemplateResponse::error(Error::MissingDependencyError("TaskRepository"))
-        .respond_to(&request)
 }
