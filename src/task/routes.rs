@@ -36,14 +36,15 @@ pub async fn finish(repository: Data<TaskRepository>, id: Path<(i32,)>) -> Respo
 }
 
 pub async fn delete(repository: Data<TaskRepository>, id: Path<(i32,)>) -> Responder {
-    match repository.delete(id.into_inner().0) {
-        Ok(affected_rows) => match affected_rows {
-            // if no rows are effected, this means no task with the given id exists.
-            // we could simply redirect back to the index route,
-            // but i choose not to do that.
-            0 => response::not_found!(),
-            _ => response::redirect_to!("/"),
-        },
-        Err(e) => response::error!(e),
+    let affected_rows = repository
+        .delete(id.into_inner().0)
+        .map_err(|e| response::error!(e))?;
+
+    match affected_rows {
+        // if no rows are effected, this means no task with the given id exists.
+        // we could simply redirect back to the index route,
+        // but i choose not to do that.
+        0 => response::not_found!(),
+        _ => response::redirect_to!("/"),
     }
 }
