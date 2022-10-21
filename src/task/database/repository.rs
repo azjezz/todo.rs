@@ -23,12 +23,12 @@ impl TaskRepository {
     //         Ok(mut connection) => {
     //             use crate::database::schema::tasks::dsl::*;
     //
-    //             let query = tasks.order_by(id).filter(id.eq(identifier));
-    //
-    //             match query.first::<Task>(&mut *connection).optional() {
-    //                 Ok(res) => Ok(res),
-    //                 Err(e) => Err(Error::from(e)),
-    //             }
+    //             tasks
+    //                 .order_by(id)
+    //                 .filter(id.eq(identifier))
+    //                 .first::<Task>(&mut *connection)
+    //                 .optional()
+    //                 .map_err(Error::from)
     //         }
     //         Err(error) => Err(error),
     //     }
@@ -39,12 +39,10 @@ impl TaskRepository {
             Ok(mut connection) => {
                 use crate::database::schema::tasks::dsl::*;
 
-                let query = tasks.order_by(id);
-
-                match query.load::<Task>(&mut *connection) {
-                    Ok(r) => Ok(r),
-                    Err(e) => Err(Error::from(e)),
-                }
+                tasks
+                    .order_by(id)
+                    .load::<Task>(&mut *connection)
+                    .map_err(Error::from)
             }
             Err(error) => Err(error),
         }
@@ -55,16 +53,15 @@ impl TaskRepository {
             Ok(mut connection) => {
                 use crate::database::schema::tasks::dsl::*;
 
-                let query = diesel::insert_into(tasks).values(&model);
-
-                match query.get_result::<(i32, String, bool)>(&mut *connection) {
-                    Ok(data) => Ok(Task {
+                diesel::insert_into(tasks)
+                    .values(&model)
+                    .get_result::<(i32, String, bool)>(&mut *connection)
+                    .map(|data| Task {
                         id: data.0,
                         content: data.1,
                         is_finished: data.2,
-                    }),
-                    Err(e) => Err(Error::from(e)),
-                }
+                    })
+                    .map_err(Error::from)
             }
             Err(e) => Err(e),
         }
@@ -75,17 +72,14 @@ impl TaskRepository {
             Ok(mut connection) => {
                 use crate::database::schema::tasks::dsl::*;
 
-                let query = diesel::update(
+                diesel::update(
                     tasks
                         .filter(id.eq(identifier))
                         .filter(is_finished.eq(false)),
                 )
-                .set(is_finished.eq(true));
-
-                match query.execute(&mut *connection) {
-                    Ok(results) => Ok(results),
-                    Err(e) => Err(Error::from(e)),
-                }
+                .set(is_finished.eq(true))
+                .execute(&mut *connection)
+                .map_err(Error::from)
             }
             Err(e) => Err(e),
         }
@@ -96,21 +90,15 @@ impl TaskRepository {
             Ok(mut connection) => {
                 use crate::database::schema::tasks::dsl::*;
 
-                let query = diesel::delete(tasks.filter(id.eq(identifier)));
-
-                match query.execute(&mut *connection) {
-                    Ok(r) => Ok(r),
-                    Err(e) => Err(Error::from(e)),
-                }
+                diesel::delete(tasks.filter(id.eq(identifier)))
+                    .execute(&mut *connection)
+                    .map_err(Error::from)
             }
             Err(e) => Err(e),
         }
     }
 
     fn get_connection(&self) -> Result<PooledConnection<ConnectionManager<PgConnection>>, Error> {
-        match self.pool.get() {
-            Ok(c) => Ok(c),
-            Err(e) => Err(Error::from(e)),
-        }
+        self.pool.get().map_err(Error::from)
     }
 }
