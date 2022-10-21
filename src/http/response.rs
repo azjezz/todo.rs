@@ -18,15 +18,6 @@ macro_rules! __response_template__ {
     };
 }
 
-macro_rules! __response_empty__ {
-    () => {
-        $crate::http::Responder::Empty(::actix_web::http::StatusCode::OK)
-    };
-    ($e:expr) => {
-        $crate::http::Responder::Empty($e)
-    };
-}
-
 macro_rules! __response_redirect_to__ {
     ($t:expr) => {
         $crate::http::Responder::Redirect($t.to_string(), ::actix_web::http::StatusCode::FOUND)
@@ -45,7 +36,6 @@ macro_rules! __response_not_found__ {
     };
 }
 
-pub(crate) use __response_empty__ as empty;
 pub(crate) use __response_error__ as error;
 pub(crate) use __response_not_found__ as not_found;
 pub(crate) use __response_redirect_to__ as redirect_to;

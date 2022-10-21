@@ -18,18 +18,18 @@ impl TaskRepository {
         TaskRepository { pool }
     }
 
-    pub fn find(&self, identifier: i32) -> Result<Option<Task>, Error> {
-        let mut connection = self.get_connection()?;
-
-        use crate::database::schema::tasks::dsl::*;
-
-        tasks
-            .order_by(id)
-            .filter(id.eq(identifier))
-            .first::<Task>(&mut *connection)
-            .optional()
-            .map_err(Error::from)
-    }
+    // pub fn find(&self, identifier: i32) -> Result<Option<Task>, Error> {
+    //     let mut connection = self.get_connection()?;
+    //
+    //     use crate::database::schema::tasks::dsl::*;
+    //
+    //     tasks
+    //         .order_by(id)
+    //         .filter(id.eq(identifier))
+    //         .first::<Task>(&mut *connection)
+    //         .optional()
+    //         .map_err(Error::from)
+    // }
 
     pub fn find_all(&self) -> Result<Vec<Task>, Error> {
         let mut connection = self.get_connection()?;
