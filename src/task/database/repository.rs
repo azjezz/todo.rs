@@ -1,37 +1,38 @@
-use crate::database::pool::PostgresPool;
 use crate::errors::Error;
 use crate::task::database::model::NewTask;
 use crate::task::database::model::Task;
 
+use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::PooledConnection;
+use r2d2::Pool;
 
 #[derive(Clone)]
 pub struct TaskRepository {
-    pool: PostgresPool,
+    pool: Pool<ConnectionManager<PgConnection>>,
 }
 
 impl TaskRepository {
-    pub fn new(pool: PostgresPool) -> Self {
+    pub fn new(pool: Pool<ConnectionManager<PgConnection>>) -> Self {
         TaskRepository { pool }
     }
 
-    pub fn find(&self, identifier: i32) -> Result<Option<Task>, Error> {
-        match self.get_connection() {
-            Ok(mut connection) => {
-                use crate::database::schema::tasks::dsl::*;
-
-                let query = tasks.order_by(id).filter(id.eq(identifier));
-
-                match query.first::<Task>(&mut *connection).optional() {
-                    Ok(res) => Ok(res),
-                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
-                }
-            }
-            Err(error) => Err(error),
-        }
-    }
+    // pub fn find(&self, identifier: i32) -> Result<Option<Task>, Error> {
+    //     match self.get_connection() {
+    //         Ok(mut connection) => {
+    //             use crate::database::schema::tasks::dsl::*;
+    //
+    //             let query = tasks.order_by(id).filter(id.eq(identifier));
+    //
+    //             match query.first::<Task>(&mut *connection).optional() {
+    //                 Ok(res) => Ok(res),
+    //                 Err(e) => Err(Error::from(e)),
+    //             }
+    //         }
+    //         Err(error) => Err(error),
+    //     }
+    // }
 
     pub fn find_all(&self) -> Result<Vec<Task>, Error> {
         match self.get_connection() {
@@ -42,7 +43,7 @@ impl TaskRepository {
 
                 match query.load::<Task>(&mut *connection) {
                     Ok(r) => Ok(r),
-                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
+                    Err(e) => Err(Error::from(e)),
                 }
             }
             Err(error) => Err(error),
@@ -62,7 +63,7 @@ impl TaskRepository {
                         content: data.1,
                         is_finished: data.2,
                     }),
-                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
+                    Err(e) => Err(Error::from(e)),
                 }
             }
             Err(e) => Err(e),
@@ -74,12 +75,16 @@ impl TaskRepository {
             Ok(mut connection) => {
                 use crate::database::schema::tasks::dsl::*;
 
-                let query =
-                    diesel::update(tasks.filter(id.eq(identifier))).set(is_finished.eq(true));
+                let query = diesel::update(
+                    tasks
+                        .filter(id.eq(identifier))
+                        .filter(is_finished.eq(false)),
+                )
+                .set(is_finished.eq(true));
 
                 match query.execute(&mut *connection) {
                     Ok(results) => Ok(results),
-                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
+                    Err(e) => Err(Error::from(e)),
                 }
             }
             Err(e) => Err(e),
@@ -95,7 +100,7 @@ impl TaskRepository {
 
                 match query.execute(&mut *connection) {
                     Ok(r) => Ok(r),
-                    Err(e) => Err(Error::DatabaseQuery(e.to_string())),
+                    Err(e) => Err(Error::from(e)),
                 }
             }
             Err(e) => Err(e),
@@ -105,7 +110,7 @@ impl TaskRepository {
     fn get_connection(&self) -> Result<PooledConnection<ConnectionManager<PgConnection>>, Error> {
         match self.pool.get() {
             Ok(c) => Ok(c),
-            Err(e) => Err(Error::DatabaseConnection(e.to_string())),
+            Err(e) => Err(Error::from(e)),
         }
     }
 }

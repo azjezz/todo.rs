@@ -1,53 +1,49 @@
-use crate::errors::Error;
+use crate::http::response;
 use crate::http::Responder;
-use crate::task::database::model::NewTask;
 use crate::task::database::repository::TaskRepository;
 use crate::task::input::CreateTask;
 
 use actix_web::web::{Data, Form, Path};
-use serde_json::json;
 
 pub async fn index(repository: Data<TaskRepository>) -> Responder {
     match repository.find_all() {
-        Ok(tasks) => Responder::html_template("index.html", json!({ "tasks": tasks })),
-        Err(e) => Responder::error(e),
+        Ok(tasks) => response::template!("index.html", { "tasks": tasks }),
+        Err(e) => response::error!(e),
     }
 }
 
 pub async fn create(repository: Data<TaskRepository>, input: Form<CreateTask>) -> Responder {
-    let model = NewTask {
-        content: &input.content,
-        is_finished: &false,
-    };
-
-    match repository.save(model) {
-        Ok(_) => Responder::redirect_to("/"),
-        Err(e) => Responder::error(e),
+    match repository.save(input.to_model()) {
+        Ok(_) => response::redirect_to!("/"),
+        Err(e) => response::error!(e),
     }
 }
 
 pub async fn finish(repository: Data<TaskRepository>, id: Path<(i32,)>) -> Responder {
-    match repository.find(id.into_inner().0) {
-        Ok(task) => match task {
-            Some(t) => match repository.finish(t.id) {
-                Ok(_) => Responder::redirect_to("/"),
-                Err(e) => Responder::error(e),
-            },
-            None => Responder::error(Error::NotFound("Task not found.".to_owned())),
+    match repository.finish(id.into_inner().0) {
+        Ok(affected_rows) => match affected_rows {
+            // if no rows are effected, this means either:
+            //    1. no task with the given id exists.
+            //    2. the task with the given id exsits, but it is already finished.
+            //
+            // we could simply redirect back to the index route,
+            // but i choose not to do that.
+            0 => response::not_found!(),
+            _ => response::redirect_to!("/"),
         },
-        Err(e) => Responder::error(e),
+        Err(e) => response::error!(e),
     }
 }
 
 pub async fn delete(repository: Data<TaskRepository>, id: Path<(i32,)>) -> Responder {
-    match repository.find(id.into_inner().0) {
-        Ok(task) => match task {
-            Some(t) => match repository.delete(t.id) {
-                Ok(_) => Responder::redirect_to("/"),
-                Err(e) => Responder::error(e),
-            },
-            None => Responder::error(Error::NotFound("Task not found.".to_owned())),
+    match repository.delete(id.into_inner().0) {
+        Ok(affected_rows) => match affected_rows {
+            // if no rows are effected, this means no task with the given id exists.
+            // we could simply redirect back to the index route,
+            // but i choose not to do that.
+            0 => response::not_found!(),
+            _ => response::redirect_to!("/"),
         },
-        Err(e) => Responder::error(e),
+        Err(e) => response::error!(e),
     }
 }
