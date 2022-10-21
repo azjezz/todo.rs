@@ -11,6 +11,7 @@ use crate::errors::Error;
 pub mod response;
 
 pub enum Responder {
+    Empty(StatusCode),
     HtmlTemplate(String, Context, StatusCode),
     Error(Error),
     Redirect(String, StatusCode),
@@ -24,6 +25,7 @@ impl ActixResponder for Responder {
             Responder::Redirect(location, status) => HttpResponseBuilder::new(status)
                 .append_header(("Location", location))
                 .finish(),
+            Responder::Empty(c) => HttpResponseBuilder::new(c).finish(),
             Responder::Error(e) => {
                 let tera = match req.app_data::<Data<Tera>>() {
                     Some(t) => t,

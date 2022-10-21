@@ -7,7 +7,7 @@ mod task;
 use crate::task::database::repository::TaskRepository;
 
 use actix_web::web::Data;
-use actix_web::web::{get, post, to};
+use actix_web::web::{delete, get, post, patch, to};
 use actix_web::{App, HttpServer};
 use dotenvy::dotenv;
 
@@ -23,8 +23,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .route("/", get().to(task::routes::index))
             .route("/task", post().to(task::routes::create))
-            .route("/task/finish/{id}", post().to(task::routes::finish))
-            .route("/task/delete/{id}", post().to(task::routes::delete))
+            .route("/task/{id}", patch().to(task::routes::finish))
+            .route("/task/{id}", delete().to(task::routes::delete))
             .default_service(to(|| async {
                 http::response::template!("errors/404.html")
             }))
