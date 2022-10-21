@@ -19,83 +19,68 @@ impl TaskRepository {
     }
 
     // pub fn find(&self, identifier: i32) -> Result<Option<Task>, Error> {
-    //     match self.get_connection() {
-    //         Ok(mut connection) => {
-    //             use crate::database::schema::tasks::dsl::*;
+    //     let mut connection = self.get_connection()?;
     //
-    //             tasks
-    //                 .order_by(id)
-    //                 .filter(id.eq(identifier))
-    //                 .first::<Task>(&mut *connection)
-    //                 .optional()
-    //                 .map_err(Error::from)
-    //         }
-    //         Err(error) => Err(error),
-    //     }
+    //     use crate::database::schema::tasks::dsl::*;
+    //
+    //     tasks
+    //         .order_by(id)
+    //         .filter(id.eq(identifier))
+    //         .first::<Task>(&mut *connection)
+    //         .optional()
+    //         .map_err(Error::from)
     // }
 
     pub fn find_all(&self) -> Result<Vec<Task>, Error> {
-        match self.get_connection() {
-            Ok(mut connection) => {
-                use crate::database::schema::tasks::dsl::*;
+        let mut connection = self.get_connection()?;
 
-                tasks
-                    .order_by(id)
-                    .load::<Task>(&mut *connection)
-                    .map_err(Error::from)
-            }
-            Err(error) => Err(error),
-        }
+        use crate::database::schema::tasks::dsl::*;
+
+        tasks
+            .order_by(id)
+            .load::<Task>(&mut *connection)
+            .map_err(Error::from)
     }
 
     pub fn save(&self, model: NewTask) -> Result<Task, Error> {
-        match self.get_connection() {
-            Ok(mut connection) => {
-                use crate::database::schema::tasks::dsl::*;
+        let mut connection = self.get_connection()?;
 
-                diesel::insert_into(tasks)
-                    .values(&model)
-                    .get_result::<(i32, String, bool)>(&mut *connection)
-                    .map(|data| Task {
-                        id: data.0,
-                        content: data.1,
-                        is_finished: data.2,
-                    })
-                    .map_err(Error::from)
-            }
-            Err(e) => Err(e),
-        }
+        use crate::database::schema::tasks::dsl::*;
+
+        diesel::insert_into(tasks)
+            .values(&model)
+            .get_result::<(i32, String, bool)>(&mut *connection)
+            .map(|data| Task {
+                id: data.0,
+                content: data.1,
+                is_finished: data.2,
+            })
+            .map_err(Error::from)
     }
 
     pub fn finish(&self, identifier: i32) -> Result<usize, Error> {
-        match self.get_connection() {
-            Ok(mut connection) => {
-                use crate::database::schema::tasks::dsl::*;
+        let mut connection = self.get_connection()?;
 
-                diesel::update(
-                    tasks
-                        .filter(id.eq(identifier))
-                        .filter(is_finished.eq(false)),
-                )
-                .set(is_finished.eq(true))
-                .execute(&mut *connection)
-                .map_err(Error::from)
-            }
-            Err(e) => Err(e),
-        }
+        use crate::database::schema::tasks::dsl::*;
+
+        diesel::update(
+            tasks
+                .filter(id.eq(identifier))
+                .filter(is_finished.eq(false)),
+        )
+        .set(is_finished.eq(true))
+        .execute(&mut *connection)
+        .map_err(Error::from)
     }
 
     pub fn delete(&self, identifier: i32) -> Result<usize, Error> {
-        match self.get_connection() {
-            Ok(mut connection) => {
-                use crate::database::schema::tasks::dsl::*;
+        let mut connection = self.get_connection()?;
 
-                diesel::delete(tasks.filter(id.eq(identifier)))
-                    .execute(&mut *connection)
-                    .map_err(Error::from)
-            }
-            Err(e) => Err(e),
-        }
+        use crate::database::schema::tasks::dsl::*;
+
+        diesel::delete(tasks.filter(id.eq(identifier)))
+            .execute(&mut *connection)
+            .map_err(Error::from)
     }
 
     fn get_connection(&self) -> Result<PooledConnection<ConnectionManager<PgConnection>>, Error> {
