@@ -5,17 +5,20 @@ pub enum Error {
     DatabaseQueryResult(diesel::result::Error),
 }
 
-impl From<r2d2::Error> for Error {
-    fn from(value: r2d2::Error) -> Error {
-        Error::DatabaseConnection(value)
-    }
+macro_rules! implement_from {
+    ($( $kind:ident => $t:ty ),*) => {
+        $(impl From<$t> for Error {
+            fn from(value: $t) -> Error {
+                Error::$kind(value)
+            }
+        })*
+    };
 }
 
-impl From<diesel::result::Error> for Error {
-    fn from(value: diesel::result::Error) -> Error {
-        Error::DatabaseQueryResult(value)
-    }
-}
+implement_from!(
+    DatabaseConnection => r2d2::Error,
+    DatabaseQueryResult => diesel::result::Error
+);
 
 impl ::std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
