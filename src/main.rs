@@ -26,7 +26,7 @@ async fn main() -> std::io::Result<()> {
 
     initialize_logger(&settings);
 
-    HttpServer::new(macros::enclose!((settings) move || {
+    HttpServer::new(enclose!(settings, {
         let mut container: Container = Container::new(&settings);
 
         App::new()
