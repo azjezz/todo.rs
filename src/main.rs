@@ -1,24 +1,33 @@
+mod container;
 mod database;
-mod dependencies;
 mod errors;
 mod http;
+mod macros;
 mod task;
 
+use crate::container::settings;
+use crate::container::settings::Settings;
+use crate::container::Container;
 use crate::task::database::repository::TaskRepository;
 
+use actix_settings::ApplySettings;
+use actix_settings::Mode;
 use actix_web::web::Data;
 use actix_web::web::{get, post, to};
 use actix_web::{App, HttpServer};
-use dotenvy::dotenv;
+use diesel::pg::PgConnection;
+use diesel::r2d2::ConnectionManager;
+use r2d2::Pool;
+use tera::Tera;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
+    let settings = settings::initialize("actix.toml");
 
-    HttpServer::new(move || {
-        let pool = dependencies::get_database_pool();
-        let tera = dependencies::get_tera();
-        let task_repository = TaskRepository::new(pool.clone());
+    initialize_logger(&settings);
+
+    HttpServer::new(macros::enclose!((settings) move || {
+        let mut container: Container = Container::new(&settings);
 
         App::new()
             .route("/", get().to(task::routes::index))
@@ -28,12 +37,27 @@ async fn main() -> std::io::Result<()> {
             .default_service(to(|| async {
                 http::response::template!("errors/404.html")
             }))
-            .app_data(Data::new(pool))
-            .app_data(Data::new(tera))
-            .app_data(Data::new(task_repository))
-    })
-    .workers(4)
-    .bind(("127.0.0.1", 8080))?
+            .app_data(container.get::<Data<Tera>>())
+            .app_data(container.get::<Data<Pool<ConnectionManager<PgConnection>>>>())
+            .app_data(container.get::<Data<TaskRepository>>())
+    }))
+    .apply_settings(&settings)
     .run()
     .await
+}
+
+fn initialize_logger(settings: &Settings) {
+    if settings.actix.enable_log {
+        match settings.actix.mode {
+            Mode::Development => {
+                std::env::set_var("RUST_BACKTRACE", "1");
+                std::env::set_var("RUST_LOG", "actix_web=debug");
+            }
+            Mode::Production => {
+                std::env::set_var("RUST_LOG", "actix_web=info");
+            }
+        }
+
+        env_logger::init();
+    }
 }

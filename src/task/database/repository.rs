@@ -1,3 +1,5 @@
+use crate::container::factory::CreatedFromContainer;
+use crate::container::Container;
 use crate::errors::Error;
 use crate::task::database::model::NewTask;
 use crate::task::database::model::Task;
@@ -5,7 +7,6 @@ use crate::task::database::model::Task;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::ConnectionManager;
-use diesel::r2d2::PooledConnection;
 use r2d2::Pool;
 
 #[derive(Clone)]
@@ -19,7 +20,7 @@ impl TaskRepository {
     }
 
     pub fn find(&self, identifier: i32) -> Result<Option<Task>, Error> {
-        let mut connection = self.get_connection()?;
+        let mut connection = self.pool.get().map_err(Error::from)?;
 
         use crate::database::schema::tasks::dsl::*;
 
@@ -32,7 +33,7 @@ impl TaskRepository {
     }
 
     pub fn find_all(&self) -> Result<Vec<Task>, Error> {
-        let mut connection = self.get_connection()?;
+        let mut connection = self.pool.get().map_err(Error::from)?;
 
         use crate::database::schema::tasks::dsl::*;
 
@@ -43,7 +44,7 @@ impl TaskRepository {
     }
 
     pub fn save(&self, model: NewTask) -> Result<Task, Error> {
-        let mut connection = self.get_connection()?;
+        let mut connection = self.pool.get().map_err(Error::from)?;
 
         use crate::database::schema::tasks::dsl::*;
 
@@ -59,7 +60,7 @@ impl TaskRepository {
     }
 
     pub fn finish(&self, identifier: i32) -> Result<usize, Error> {
-        let mut connection = self.get_connection()?;
+        let mut connection = self.pool.get().map_err(Error::from)?;
 
         use crate::database::schema::tasks::dsl::*;
 
@@ -74,7 +75,7 @@ impl TaskRepository {
     }
 
     pub fn delete(&self, identifier: i32) -> Result<usize, Error> {
-        let mut connection = self.get_connection()?;
+        let mut connection = self.pool.get().map_err(Error::from)?;
 
         use crate::database::schema::tasks::dsl::*;
 
@@ -82,8 +83,10 @@ impl TaskRepository {
             .execute(&mut *connection)
             .map_err(Error::from)
     }
+}
 
-    fn get_connection(&self) -> Result<PooledConnection<ConnectionManager<PgConnection>>, Error> {
-        self.pool.get().map_err(Error::from)
+impl CreatedFromContainer for TaskRepository {
+    fn create(container: &mut Container) -> TaskRepository {
+        TaskRepository::new(container.get::<Pool<ConnectionManager<PgConnection>>>())
     }
 }
